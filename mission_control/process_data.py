@@ -18,11 +18,6 @@ class Alert(typing.TypedDict):
     component: str
     timestamp: dt.datetime
 
-class RecordEncoder(json.JSONEncoder):
-    def default(self, o):
-        print(o)
-        return ""
-
 
 @dataclass
 class Record:

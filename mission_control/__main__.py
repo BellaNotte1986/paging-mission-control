@@ -1,7 +1,17 @@
+from collections.abc import Sequence
 import sys
 import typing
 import datetime as dt
-from .process_data import Alert, Component, Record, register
+from .process_data import Alert, RecordProcessor, Component, Record
+import json
+
+
+class AlertEncoder(json.JSONEncoder):
+    def default(self, o: dt.datetime):
+        # this technically doesn't match the sample output, since Python's
+        # datetime doesn't use the "Z" for UTC, but it's the same so it should
+        # be fine
+        return o.isoformat()
 
 
 def parse_timestamp(s: str) -> dt.datetime:
@@ -15,8 +25,10 @@ def parse_timestamp(s: str) -> dt.datetime:
 
     """
 
-    # timestamp is annoyingly nonstandard
-    return dt.datetime.strptime(s, "%Y%m%d %H:%M:%S.%f")
+    # not sure what time zone to use, but the sample output uses UTC, so that
+    # will probably be fine
+    ts = dt.datetime.strptime(s, "%Y%m%d %H:%M:%S.%f")
+    return ts.replace(tzinfo=dt.UTC)
 
 
 def read_records() -> typing.Iterable[Record]:
@@ -49,8 +61,64 @@ if len(sys.argv) != 2:
     print(f"Usage: python mission_control.py [input_data]")
     sys.exit(1)
 
+rp = RecordProcessor()
 
-@register(name="LOW VOLTAGE")
-def low_voltage(records: list[Record]) -> Alert | None:
-    print("low voltage check")
 
+@rp.register_alert(component=Component.BATT)
+def low_voltage(records: Sequence[Record]) -> Alert | None:
+    """
+    Check if there are 3 or more records with a voltage reading below the
+    red_low in the last 5 minutes.
+    """
+
+    if not records:
+        return None
+
+    notable = []
+    last = records[-1]
+    for record in records:
+        if (
+            record.val < record.red_low
+            and (last.timestamp - record.timestamp).seconds < 5 * 60
+        ):
+            notable.append(record)
+
+    if len(notable) > 2:
+        return Alert(
+            satellite_id=notable[0].satellite_id,
+            severity="RED LOW",
+            component=notable[0].component,
+            timestamp=notable[0].timestamp,
+        )
+
+
+@rp.register_alert(component=Component.TSTAT)
+def high_temp(records: Sequence[Record]) -> Alert | None:
+    """
+    Check if there are 3 or more records with a temperature reading above the
+    red_high in the last 5 minutes.
+    """
+
+    if not records:
+        return None
+    notable = []
+    last = records[-1]
+    for record in records:
+        if (
+            record.val > record.red_high
+            and (last.timestamp - record.timestamp).seconds < 5 * 60
+        ):
+            notable.append(record)
+
+    if len(notable) > 2:
+        return Alert(
+            satellite_id=notable[0].satellite_id,
+            severity="RED HIGH",
+            component=notable[0].component,
+            timestamp=notable[0].timestamp,
+        )
+
+
+alerts = rp.process(read_records())
+print(json.dumps(alerts, cls=AlertEncoder, indent=2))
+# print(*rp.data.values(), sep="\n")

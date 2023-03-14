@@ -1,8 +1,10 @@
-import sys
 from dataclasses import dataclass
 import datetime as dt
 import enum
 import typing
+from collections.abc import Iterable, Sequence
+from functools import reduce
+import json
 
 
 class Component(enum.StrEnum):
@@ -11,10 +13,15 @@ class Component(enum.StrEnum):
 
 
 class Alert(typing.TypedDict):
-    satelliteId: int
+    satellite_id: int
     severity: str
     component: str
     timestamp: dt.datetime
+
+class RecordEncoder(json.JSONEncoder):
+    def default(self, o):
+        print(o)
+        return ""
 
 
 @dataclass
@@ -29,26 +36,56 @@ class Record:
     component: Component
 
 
-checks: dict[str, typing.Callable[[list[Record]], Alert | None]] = {}
+class RecordProcessor:
+    """Processes records and returns warnings if necessary"""
 
+    def __init__(self):
+        self.data: dict[int, list[Record]] = {}
+        self.alerts: dict[
+            Component, list[typing.Callable[[list[Record]], Alert | None]]
+        ] = {}
+        # can't use dict.fromkeys because we would end up with many references
+        # to the same list
+        for variant in Component:
+            self.alerts[variant] = []
 
-def register(name: str):
-    """Add a check to be run for each Record processed"""
+    def process(self, records: typing.Iterable[Record]) -> Sequence[Alert]:
+        alerts = []
+        for record in records:
+            alerts.extend(self.run_checks(record))
 
-    def outer(f: typing.Callable[[list[Record]], Alert | None]):
-        checks[name] = f
+        return alerts
 
-        def wrapper(records: list[Record]):
-            return f(records)
+    def register_alert(self, component: Component):
+        """
+        Register a function to check whether or not an Alert should be
+        emitted
+        """
 
-        return wrapper
+        def outer(f: typing.Callable[[Sequence[Record]], Alert | None]):
+            self.alerts[component].append(f)
 
-    return outer
+            def wrapper(records: Sequence[Record]):
+                return f(records)
 
+            return wrapper
 
-def run_checks(records: list[Record]) -> list[Alert]:
-    alerts = []
-    for name, check in checks.items():
-        if alert := check(records):
-            alerts.append(alert)
-    return alerts
+        return outer
+
+    def run_checks(self, latest: Record) -> list[Alert]:
+        self.data.setdefault(latest.satellite_id, []).append(latest)
+
+        # first, remove data we don't need to keep anymore by constructing a new
+        # dictionary.
+        # in the future we could also do logging here
+
+        # next, run alert checks
+        alerts = []
+
+        # only need to run checks on the satellite_id that was added though
+        # this could change in the future depending on what we want to check
+        for check in self.alerts[latest.component]:
+            if t := check(self.data[latest.satellite_id]):
+                alerts.append(t)
+
+        return alerts

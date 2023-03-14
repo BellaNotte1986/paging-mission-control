@@ -2,7 +2,6 @@ import sys
 from dataclasses import dataclass
 import datetime as dt
 import enum
-from operator import attrgetter
 import typing
 
 
@@ -80,9 +79,3 @@ def read_records() -> typing.Iterable[Record]:
             )
 
 
-if len(sys.argv) != 2:
-    print(f"Usage: python mission_control.py [input_data]")
-    sys.exit(1)
-
-records = read_records()
-print(*records, sep="\n")

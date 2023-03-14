@@ -13,7 +13,7 @@ class Component(enum.StrEnum):
 
 
 class Alert(typing.TypedDict):
-    satellite_id: int
+    satelliteId: int
     severity: str
     component: str
     timestamp: dt.datetime

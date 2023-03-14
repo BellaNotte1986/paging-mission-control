@@ -85,7 +85,7 @@ def low_voltage(records: Sequence[Record]) -> Alert | None:
 
     if len(notable) > 2:
         return Alert(
-            satellite_id=notable[0].satellite_id,
+            satelliteId=notable[0].satellite_id,
             severity="RED LOW",
             component=notable[0].component,
             timestamp=notable[0].timestamp,
@@ -112,7 +112,7 @@ def high_temp(records: Sequence[Record]) -> Alert | None:
 
     if len(notable) > 2:
         return Alert(
-            satellite_id=notable[0].satellite_id,
+            satelliteId=notable[0].satellite_id,
             severity="RED HIGH",
             component=notable[0].component,
             timestamp=notable[0].timestamp,
@@ -120,5 +120,4 @@ def high_temp(records: Sequence[Record]) -> Alert | None:
 
 
 alerts = rp.process(read_records())
-print(json.dumps(alerts, cls=AlertEncoder, indent=2))
-# print(*rp.data.values(), sep="\n")
+print(json.dumps(alerts, cls=AlertEncoder, indent=4))

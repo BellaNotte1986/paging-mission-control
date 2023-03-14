@@ -10,6 +10,7 @@ class Component(enum.StrEnum):
     BATT = "BATT"
     TSTAT = "TSTAT"
 
+
 class Alert(typing.TypedDict):
     satelliteId: int
     severity: str
@@ -30,6 +31,7 @@ class Record:
 
 
 checks: list[typing.Callable[[list[Record]], Alert | None]] = []
+
 
 def register(f: typing.Callable[[list[Record]], Alert | None]):
     """Add a check to be run for each Record processed"""
@@ -52,9 +54,8 @@ def parse_timestamp(s: str) -> dt.datetime:
     return dt.datetime.strptime(s, "%Y%m%d %H:%M:%S.%f")
 
 
-def read_records() -> list[Record]:
+def read_records() -> typing.Iterable[Record]:
     input_file = sys.argv[1]  # first is filename
-    records = []
     with open(input_file) as f:
         for line in map(str.strip, f):
             (
@@ -67,23 +68,16 @@ def read_records() -> list[Record]:
                 val,
                 component,
             ) = line.split("|")
-            records.append(
-                Record(
-                    timestamp=parse_timestamp(ts),
-                    satellite_id=int(sid),
-                    red_high=int(red_high),
-                    yellow_high=int(yellow_high),
-                    yellow_low=int(yellow_low),
-                    red_low=int(red_low),
-                    val=float(val),
-                    component=Component(component),
-                )
+            yield Record(
+                timestamp=parse_timestamp(ts),
+                satellite_id=int(sid),
+                red_high=int(red_high),
+                yellow_high=int(yellow_high),
+                yellow_low=int(yellow_low),
+                red_low=int(red_low),
+                val=float(val),
+                component=Component(component),
             )
-
-    # not sure if sorting is necessary. the test data is ordered, but it could
-    # be possible that data may arrive out of order. if it's ordered anyways,
-    # we don't pay that much since timsort can handle it relatively quickly
-    return sorted(records, key=attrgetter("timestamp"))
 
 
 if len(sys.argv) != 2:

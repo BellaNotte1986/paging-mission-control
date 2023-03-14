@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "paging-mission-control"
+version = "0.1.0"
+description = "Ingest status telemetry data from satellites and create alert messages when necessary"
+authors = ["jz9 <69145546+jonathan-d-zhang@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{include = "paging_mission_control"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

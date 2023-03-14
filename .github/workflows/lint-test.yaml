@@ -1,4 +1,4 @@
-name: Lint
+name: Lint and Test
 
 on:
   push:
@@ -28,4 +28,7 @@ jobs:
         run: "poetry run flake8 \
           --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
           [flake8] %(code)s: %(text)s'"
+
+      - name: Run tests
+        run: "poetry run pytest"
 

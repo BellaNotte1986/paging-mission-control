@@ -29,14 +29,12 @@ class Record:
     component: Component
 
 
-class Filter(typing.Protocol):
-    def keep( self, record: Record) -> bool:
-        """Determine whether or not if this record is notable."""
-        ...
+checks: list[typing.Callable[[list[Record]], Alert | None]] = []
 
-    def check(self, records: list[Record]) -> Alert | None:
-        """Return a warning if one should be emitted, None otherwise"""
-        ...
+def register(f: typing.Callable[[list[Record]], Alert | None]):
+    """Add a check to be run for each Record processed"""
+    checks.append(f)
+    return f
 
 
 def parse_timestamp(s: str) -> dt.datetime:

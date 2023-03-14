@@ -3,11 +3,18 @@ from dataclasses import dataclass
 import datetime as dt
 import enum
 from operator import attrgetter
+import typing
 
 
 class Component(enum.StrEnum):
     BATT = "BATT"
     TSTAT = "TSTAT"
+
+class Alert(typing.TypedDict):
+    satelliteId: int
+    severity: str
+    component: str
+    timestamp: dt.datetime
 
 
 @dataclass
@@ -20,6 +27,16 @@ class Record:
     red_low: int
     val: float
     component: Component
+
+
+class Filter(typing.Protocol):
+    def keep( self, record: Record) -> bool:
+        """Determine whether or not if this record is notable."""
+        ...
+
+    def check(self, records: list[Record]) -> Alert | None:
+        """Return a warning if one should be emitted, None otherwise"""
+        ...
 
 
 def parse_timestamp(s: str) -> dt.datetime:
@@ -74,3 +91,6 @@ def read_records() -> list[Record]:
 if len(sys.argv) != 2:
     print(f"Usage: python mission_control.py [input_data]")
     sys.exit(1)
+
+records = read_records()
+print(*records, sep="\n")

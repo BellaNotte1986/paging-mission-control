@@ -1,13 +1,21 @@
-from collections.abc import Sequence
+import datetime as dt
+import json
 import sys
 import typing
-import datetime as dt
-from .process_data import Alert, RecordProcessor, Component, Record
-import json
+from collections.abc import Sequence
+
+from .process_data import Alert, Component, Record, RecordProcessor
 
 
 class AlertEncoder(json.JSONEncoder):
-    def default(self, o: dt.datetime):
+    """
+    Allows serialization of datetime.datetime instances.
+
+    Should only be used for serializing `Alert`s
+    """
+
+    def default(self, o: dt.datetime) -> str:
+        """Serializes datetimes in ISO 8601 format."""
         # this technically doesn't match the sample output, since Python's
         # datetime doesn't use the "Z" for UTC, but it's the same so it should
         # be fine
@@ -15,7 +23,8 @@ class AlertEncoder(json.JSONEncoder):
 
 
 def parse_timestamp(s: str) -> dt.datetime:
-    """Parse the timestamp from the record. For example, something like 20180101 23:01:05.001
+    """
+    Parse the timestamp from the record timestamp format.
 
     Args:
         s (str): the timestamp to be parsed
@@ -24,7 +33,6 @@ def parse_timestamp(s: str) -> dt.datetime:
         dt.datetime: The parsed timestamp
 
     """
-
     # not sure what time zone to use, but the sample output uses UTC, so that
     # will probably be fine
     ts = dt.datetime.strptime(s, "%Y%m%d %H:%M:%S.%f")
@@ -32,7 +40,8 @@ def parse_timestamp(s: str) -> dt.datetime:
 
 
 def read_records() -> typing.Iterable[Record]:
-    input_file = sys.argv[1]  # first is filename
+    """Read the records from the filename passed as command line argument."""
+    input_file = sys.argv[1]  # first is the path of the program itself
     with open(input_file) as f:
         for line in map(str.strip, f):
             (
@@ -58,7 +67,7 @@ def read_records() -> typing.Iterable[Record]:
 
 
 if len(sys.argv) != 2:
-    print(f"Usage: python mission_control.py [input_data]")
+    print("Usage: python mission_control.py [input_data]")
     sys.exit(1)
 
 rp = RecordProcessor()
@@ -66,11 +75,7 @@ rp = RecordProcessor()
 
 @rp.register_alert(component=Component.BATT)
 def low_voltage(records: Sequence[Record]) -> Alert | None:
-    """
-    Check if there are 3 or more records with a voltage reading below the
-    red_low in the last 5 minutes.
-    """
-
+    """Check if there are 3 or more records with a voltage reading below the red_low in the last 5 minutes."""
     if not records:
         return None
 
@@ -94,11 +99,7 @@ def low_voltage(records: Sequence[Record]) -> Alert | None:
 
 @rp.register_alert(component=Component.TSTAT)
 def high_temp(records: Sequence[Record]) -> Alert | None:
-    """
-    Check if there are 3 or more records with a temperature reading above the
-    red_high in the last 5 minutes.
-    """
-
+    """Check if there are 3 or more records with a temperature reading above the red_high in the last 5 minutes."""
     if not records:
         return None
     notable = []

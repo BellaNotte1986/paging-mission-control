@@ -29,53 +29,26 @@ class Record:
     component: Component
 
 
-checks: list[typing.Callable[[list[Record]], Alert | None]] = []
+checks: dict[str, typing.Callable[[list[Record]], Alert | None]] = {}
 
 
-def register(f: typing.Callable[[list[Record]], Alert | None]):
+def register(name: str):
     """Add a check to be run for each Record processed"""
-    checks.append(f)
-    return f
+
+    def outer(f: typing.Callable[[list[Record]], Alert | None]):
+        checks[name] = f
+
+        def wrapper(records: list[Record]):
+            return f(records)
+
+        return wrapper
+
+    return outer
 
 
-def parse_timestamp(s: str) -> dt.datetime:
-    """Parse the timestamp from the record. For example, something like 20180101 23:01:05.001
-
-    Args:
-        s (str): the timestamp to be parsed
-
-    Returns:
-        dt.datetime: The parsed timestamp
-
-    """
-
-    # timestamp is annoyingly nonstandard
-    return dt.datetime.strptime(s, "%Y%m%d %H:%M:%S.%f")
-
-
-def read_records() -> typing.Iterable[Record]:
-    input_file = sys.argv[1]  # first is filename
-    with open(input_file) as f:
-        for line in map(str.strip, f):
-            (
-                ts,
-                sid,
-                red_high,
-                yellow_high,
-                yellow_low,
-                red_low,
-                val,
-                component,
-            ) = line.split("|")
-            yield Record(
-                timestamp=parse_timestamp(ts),
-                satellite_id=int(sid),
-                red_high=int(red_high),
-                yellow_high=int(yellow_high),
-                yellow_low=int(yellow_low),
-                red_low=int(red_low),
-                val=float(val),
-                component=Component(component),
-            )
-
-
+def run_checks(records: list[Record]) -> list[Alert]:
+    alerts = []
+    for name, check in checks.items():
+        if alert := check(records):
+            alerts.append(alert)
+    return alerts

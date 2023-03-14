@@ -66,10 +66,6 @@ def read_records() -> typing.Iterable[Record]:
             )
 
 
-if len(sys.argv) != 2:
-    print("Usage: python mission_control.py [input_data]")
-    sys.exit(1)
-
 rp = RecordProcessor()
 
 
@@ -119,6 +115,10 @@ def high_temp(records: Sequence[Record]) -> Alert | None:
             timestamp=notable[0].timestamp,
         )
 
+
+if len(sys.argv) != 2:
+    print("Usage: python -m mission_control [input_data_file]")
+    sys.exit(1)
 
 alerts = rp.process(read_records())
 print(json.dumps(alerts, cls=AlertEncoder, indent=4))

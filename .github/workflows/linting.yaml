@@ -1,0 +1,33 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v2.1.6
+        with:
+          poetry-version: "1.4"
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run flake8
+        run: "flake8 \
+          --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
+          [flake8] %(code)s: %(text)s'"
+

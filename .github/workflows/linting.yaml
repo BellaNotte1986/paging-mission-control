@@ -25,7 +25,7 @@ jobs:
         run: poetry install
 
       - name: Run flake8
-        run: "flake8 \
+        run: "poetry run flake8 \
           --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
           [flake8] %(code)s: %(text)s'"
 

@@ -3,6 +3,7 @@ import json
 import sys
 import typing
 from collections.abc import Sequence
+from pathlib import Path
 
 from .process_data import Alert, Component, Record, RecordProcessor
 
@@ -39,10 +40,9 @@ def parse_timestamp(s: str) -> dt.datetime:
     return ts.replace(tzinfo=dt.UTC)
 
 
-def read_records() -> typing.Iterable[Record]:
+def read_records(filename: str | Path) -> typing.Iterable[Record]:
     """Read the records from the filename passed as command line argument."""
-    input_file = sys.argv[1]  # first is the path of the program itself
-    with open(input_file) as f:
+    with open(filename) as f:
         for line in map(str.strip, f):
             (
                 ts,
@@ -118,5 +118,6 @@ if __name__ == '__main__':
         print("Usage: python -m mission_control [input_data_file]")
         sys.exit(1)
 
-    alerts = rp.process(read_records())
+    input_file = sys.argv[1]  # first is the path of the program itself
+    alerts = rp.process(read_records(input_file))
     print(json.dumps(alerts, cls=AlertEncoder, indent=4))

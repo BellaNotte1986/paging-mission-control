@@ -1,4 +1,5 @@
 from datetime import datetime
+import json 
 
 def fetchTxtFile(filename: str) -> list[str]:
   '''return a list of status telemetry data in lines'''
@@ -33,7 +34,7 @@ def createRecord(row: str) -> dict:
       'satelliteId': int(satellite_id),
       'severity': createSeverity(float(red_high_limit), float(yellow_high_limit), float(yellow_low_limit), float(red_low_limit), float(raw_value)),
       'component': component,
-      'timestamp': createTimestamp(timestamp),
+      'timestamp': str(createTimestamp(timestamp).isoformat()),
     }
   
   return record
@@ -42,20 +43,46 @@ def fileToData(data: list[str]) -> list[dict]:
   result = [createRecord(status) for status in data]
   return result
 
-def createAlert(status: dict) -> dict:
-  
-  return {}
-def alert(data: list[dict]) -> list[dict]:
-  alert_list = list()
+def tstatRedHigh(data: dict) -> bool:
+  return data['component'] == 'TSTAT' and data['severity'] == "RED HIGH"
+
+def battRedLow(data: dict) -> bool:
+  return data['component'] == 'BATT' and data['severity'] == "RED LOW"
+
+def alertReport(data: list[dict]) -> list[dict]:
+  batt_red_low = dict()
+  tstat_red_high = dict()
   result = list()
-  battery_voltage_below_red_low = dict()
-  temperature_reading_exceed_red_high = dict()
-  pass
+  
+  for status in data:
+    if tstatRedHigh(status):
+      if status['satelliteId'] not in tstat_red_high:
+        tstat_red_high[status['satelliteId']] = {
+          'count': 0,
+          'case': status
+         }
+      tstat_red_high[status['satelliteId']]['count'] += 1
+      
+      if tstat_red_high[status['satelliteId']]['count'] >= 3:
+        result.append(tstat_red_high[status['satelliteId']]['case'])
+    
+    if battRedLow(status):
+      if status['satelliteId'] not in batt_red_low:
+        batt_red_low[status['satelliteId']] = {
+          'count': 0,
+          'case': status
+         }
+      batt_red_low[status['satelliteId']]['count'] += 1
+      
+      if batt_red_low[status['satelliteId']]['count'] >= 3:
+        result.append(batt_red_low[status['satelliteId']]['case'])
+        
+  return result
+      
 
   
 
 data = fetchTxtFile("input.txt")
 data = fileToData(data)
-for line in data:
-  print(line)
-# print(data[0]['timestamp'].isoformat())
+result =  json.dumps(alertReport(data), indent = 4)
+print(result)

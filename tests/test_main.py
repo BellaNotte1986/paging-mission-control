@@ -48,20 +48,20 @@ TIMESTAMPS = [
 def test_data() -> list[tuple[int, int, int, int, int, float, Component]]:
     """Test fixture for sample input."""
     return [
-        (1001, 101, 98, 25, 20, 99.9, Component("TSTAT")),
-        (1000, 17, 15, 9, 8, 7.8, Component("BATT")),
-        (1001, 101, 98, 25, 20, 99.8, Component("TSTAT")),
-        (1000, 101, 98, 25, 20, 102.9, Component("TSTAT")),
-        (1000, 101, 98, 25, 20, 87.9, Component("TSTAT")),
-        (1001, 101, 98, 25, 20, 89.3, Component("TSTAT")),
-        (1001, 101, 98, 25, 20, 89.4, Component("TSTAT")),
-        (1000, 17, 15, 9, 8, 7.7, Component("BATT")),
-        (1000, 101, 98, 25, 20, 102.7, Component("TSTAT")),
-        (1000, 101, 98, 25, 20, 101.2, Component("TSTAT")),
-        (1001, 101, 98, 25, 20, 89.9, Component("TSTAT")),
-        (1000, 17, 15, 9, 8, 7.9, Component("BATT")),
-        (1001, 101, 98, 25, 20, 89.9, Component("TSTAT")),
-        (1001, 17, 15, 9, 8, 7.9, Component("BATT")),
+        (1001, 101, 98, 25, 20, 99.9, Component.TSTAT),
+        (1000, 17, 15, 9, 8, 7.8, Component.BATT),
+        (1001, 101, 98, 25, 20, 99.8, Component.TSTAT),
+        (1000, 101, 98, 25, 20, 102.9, Component.TSTAT),
+        (1000, 101, 98, 25, 20, 87.9, Component.TSTAT),
+        (1001, 101, 98, 25, 20, 89.3, Component.TSTAT),
+        (1001, 101, 98, 25, 20, 89.4, Component.TSTAT),
+        (1000, 17, 15, 9, 8, 7.7, Component.BATT),
+        (1000, 101, 98, 25, 20, 102.7, Component.TSTAT),
+        (1000, 101, 98, 25, 20, 101.2, Component.TSTAT),
+        (1001, 101, 98, 25, 20, 89.9, Component.TSTAT),
+        (1000, 17, 15, 9, 8, 7.9, Component.BATT),
+        (1001, 101, 98, 25, 20, 89.9, Component.TSTAT),
+        (1001, 17, 15, 9, 8, 7.9, Component.BATT),
     ]
 
 
@@ -90,7 +90,7 @@ def test_read_records(tmp_path: Path, records: list[Record]) -> None:
 def test_age(records: list[Record]) -> None:
     """Test age filter."""
     records = (
-        [Record(dt.datetime(2018, 1, 1, 22, tzinfo=UTC), 1000, 20, 20, 20, 20, 20, Component("BATT"))] + records
+        [Record(dt.datetime(2018, 1, 1, 22, tzinfo=UTC), 1000, 20, 20, 20, 20, 20, Component.BATT)] + records
     )
     # all entries are within 5 minutes of each other, except the one we just added
     assert list(__main__.age(records)) == [False] + [True] * (len(records) - 1)
@@ -100,7 +100,7 @@ def test_high_temp(records: list[Record]) -> None:
     """Test high temp alert."""
     assert (
         __main__.high_temp([x for x in records if x.satellite_id == 1000])
-        == Alert(satelliteId=1000, severity="RED HIGH", component=Component("TSTAT"), timestamp=TIMESTAMPS[3])
+        == Alert(satelliteId=1000, severity="RED HIGH", component=Component.TSTAT, timestamp=TIMESTAMPS[3])
     )
 
 
@@ -108,5 +108,5 @@ def test_low_voltage(records: list[Record]) -> None:
     """Test low voltage alert."""
     assert (
         __main__.low_voltage([x for x in records if x.satellite_id == 1000])
-        == Alert(satelliteId=1000, severity="RED LOW", component=Component("BATT"), timestamp=TIMESTAMPS[1])
+        == Alert(satelliteId=1000, severity="RED LOW", component=Component.BATT, timestamp=TIMESTAMPS[1])
     )

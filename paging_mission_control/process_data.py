@@ -104,20 +104,21 @@ class RecordProcessor:
         """Run the registered callbacks."""
         # remove records that we don't need to store anymore
         # in order for a record to be removed, all filters must return False
-        new_records = []
         # could also parallelize in the future
-        for record, filter_results in zip(satellite, zip(*(f(satellite) for f in self.filters))):
-            if any(filter_results):
-                new_records.append(record)
+        if self.filters:
+            new_records = []
+            for record, filter_results in zip(satellite, zip(*(f(satellite) for f in self.filters))):
+                if any(filter_results):
+                    new_records.append(record)
 
-        self.data[satellite[-1].satellite_id] = new_records
+            self.data[satellite[-1].satellite_id] = new_records
 
         alerts = []
         # only need to run checks on the satellite_id that was just added,
         # though this could change in the future depending on what we want to
         # check
         for check in self.alerts[satellite[-1].component]:
-            if t := check(new_records):
+            if t := check(self.data[satellite[-1].satellite_id]):
                 alerts.append(t)
 
         return alerts

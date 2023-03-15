@@ -66,7 +66,7 @@ class RecordProcessor:
         alerts = []
         for record in records:
             self.data.setdefault(record.satellite_id, []).append(record)
-            alerts.extend(self.run_checks(self.data[record.satellite_id]))
+            alerts.extend(self._run_checks(self.data[record.satellite_id]))
 
         return alerts
 
@@ -98,7 +98,7 @@ class RecordProcessor:
 
         return outer
 
-    def run_checks(self, satellite: list[Record]) -> Iterable[Alert]:
+    def _run_checks(self, satellite: list[Record]) -> Iterable[Alert]:
         """Run the registered callbacks."""
         # remove records that we don't need to store anymore
         # in order for a record to be removed, all filters must return False
@@ -111,8 +111,9 @@ class RecordProcessor:
         self.data[satellite[-1].satellite_id] = new_records
 
         alerts = []
-        # only need to run checks on the satellite_id that was added, though
-        # this could change in the future depending on what we want to check
+        # only need to run checks on the satellite_id that was just added,
+        # though this could change in the future depending on what we want to
+        # check
         for check in self.alerts[satellite[-1].component]:
             if t := check(new_records):
                 alerts.append(t)

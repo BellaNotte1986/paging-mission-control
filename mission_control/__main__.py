@@ -75,20 +75,18 @@ def low_voltage(records: Sequence[Record]) -> Alert | None:
     if not records:
         return None
 
-    notable = []
-    for record in records:
-        if (
-            record.val < record.red_low
-        ):
-            notable.append(record)
+    notable = 0
+    for record in reversed(records):
+        if record.val < record.red_low:
+            notable += 1
 
-    if len(notable) > 2:
-        return Alert(
-            satelliteId=notable[0].satellite_id,
-            severity="RED LOW",
-            component=notable[0].component,
-            timestamp=notable[0].timestamp,
-        )
+        if notable > 2:
+            return Alert(
+                satelliteId=record.satellite_id,
+                severity="RED LOW",
+                component=record.component,
+                timestamp=record.timestamp,
+            )
 
 
 @rp.register_alert(component=Component.TSTAT)
@@ -96,18 +94,19 @@ def high_temp(records: Sequence[Record]) -> Alert | None:
     """Check if there are 3 or more records with a temperature reading above the red_high."""
     if not records:
         return None
-    notable = []
-    for record in records:
-        if record.val > record.red_high:
-            notable.append(record)
 
-    if len(notable) > 2:
-        return Alert(
-            satelliteId=notable[0].satellite_id,
-            severity="RED HIGH",
-            component=notable[0].component,
-            timestamp=notable[0].timestamp,
-        )
+    notable = 0
+    for record in reversed(records):
+        if record.val > record.red_high:
+            notable += 1
+
+        if notable > 2:
+            return Alert(
+                satelliteId=record.satellite_id,
+                severity="RED HIGH",
+                component=record.component,
+                timestamp=record.timestamp,
+            )
 
 
 @rp.register_filter()

@@ -36,6 +36,7 @@ class Record:
 
 
 AlertCallback = typing.Callable[[Sequence[Record]], Alert | None]
+FilterCallback = typing.Callable[[Sequence[Record]], Iterable[bool]]
 
 
 class RecordProcessor:
@@ -43,6 +44,7 @@ class RecordProcessor:
 
     def __init__(self):
         self.data: dict[int, list[Record]] = {}
+        self.filters: list[FilterCallback] = []
         self.alerts: dict[
             Component, list[AlertCallback]
         ] = {}
@@ -64,13 +66,13 @@ class RecordProcessor:
         alerts = []
         for record in records:
             self.data.setdefault(record.satellite_id, []).append(record)
-            alerts.extend(self.run_checks(record))
+            alerts.extend(self.run_checks(self.data[record.satellite_id]))
 
         return alerts
 
     def register_alert(self, component: Component) -> typing.Callable[[AlertCallback], AlertCallback]:
         """Register a function to check whether or not an Alert should be emitted."""
-        def outer(f: typing.Callable[[Sequence[Record]], Alert | None]) -> AlertCallback:
+        def outer(f: AlertCallback) -> AlertCallback:
             self.alerts[component].append(f)
 
             def wrapper(records: Sequence[Record]) -> Alert | None:
@@ -80,13 +82,39 @@ class RecordProcessor:
 
         return outer
 
-    def run_checks(self, latest: Record) -> list[Alert]:
+    def register_filter(self) -> typing.Callable[[FilterCallback], FilterCallback]:
+        """
+        Register a function to check if a record should be kept.
+
+        The most recently added record will be the last element.
+        """
+        def outer(f: FilterCallback) -> FilterCallback:
+            self.filters.append(f)
+
+            def wrapper(records: Sequence[Record]) -> Iterable[bool]:
+                return f(records)
+
+            return wrapper
+
+        return outer
+
+    def run_checks(self, satellite: list[Record]) -> Iterable[Alert]:
         """Run the registered callbacks."""
+        # remove records that we don't need to store anymore
+        # in order for a record to be removed, all filters must return False
+        new_records = []
+        # could also parallelize in the future
+        for record, filter_results in zip(satellite, zip(*(f(satellite) for f in self.filters))):
+            if any(filter_results):
+                new_records.append(record)
+
+        self.data[satellite[-1].satellite_id] = new_records
+
         alerts = []
-        # only need to run checks on the satellite_id that was added though
+        # only need to run checks on the satellite_id that was added, though
         # this could change in the future depending on what we want to check
-        for check in self.alerts[latest.component]:
-            if t := check(self.data[latest.satellite_id]):
+        for check in self.alerts[satellite[-1].component]:
+            if t := check(new_records):
                 alerts.append(t)
 
         return alerts

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from mission_control import __main__
-from mission_control.process_data import Alert, Component, Record
+from paging_mission_control import __main__
+from paging_mission_control.process_data import Alert, Component, Record
 
 TEST_INPUT = """\
 20180101 23:01:05.001|1001|101|98|25|20|99.9|TSTAT

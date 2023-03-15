@@ -5,7 +5,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 
-class Component(enum.StrEnum):
+class Component(str, enum.Enum):
     """Represents the different component types."""
 
     BATT = "BATT"

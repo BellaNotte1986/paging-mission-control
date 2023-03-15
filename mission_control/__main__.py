@@ -2,7 +2,7 @@ import datetime as dt
 import json
 import sys
 import typing
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from .process_data import Alert, Component, Record, RecordProcessor
@@ -18,8 +18,8 @@ class AlertEncoder(json.JSONEncoder):
     def default(self, o: dt.datetime) -> str:
         """Serializes datetimes in ISO 8601 format."""
         # this technically doesn't match the sample output, since Python's
-        # datetime doesn't use the "Z" for UTC, but it's the same so it should
-        # be fine
+        # datetime doesn't use the "Z" for UTC, but it's equivalent so it
+        # should be fine
         return o.isoformat()
 
 
@@ -71,16 +71,14 @@ if __name__ == '__main__':
 
     @rp.register_alert(component=Component.BATT)
     def low_voltage(records: Sequence[Record]) -> Alert | None:
-        """Check if there are 3 or more records with a voltage reading below the red_low in the last 5 minutes."""
+        """Check if there are 3 or more records with a voltage reading below the red_low."""
         if not records:
             return None
 
         notable = []
-        last = records[-1]
         for record in records:
             if (
                 record.val < record.red_low
-                and (last.timestamp - record.timestamp).seconds < 5 * 60
             ):
                 notable.append(record)
 
@@ -94,16 +92,12 @@ if __name__ == '__main__':
 
     @rp.register_alert(component=Component.TSTAT)
     def high_temp(records: Sequence[Record]) -> Alert | None:
-        """Check if there are 3 or more records with a temperature reading above the red_high in the last 5 minutes."""
+        """Check if there are 3 or more records with a temperature reading above the red_high."""
         if not records:
             return None
         notable = []
-        last = records[-1]
         for record in records:
-            if (
-                record.val > record.red_high
-                and (last.timestamp - record.timestamp).seconds < 5 * 60
-            ):
+            if record.val > record.red_high:
                 notable.append(record)
 
         if len(notable) > 2:
@@ -113,6 +107,13 @@ if __name__ == '__main__':
                 component=notable[0].component,
                 timestamp=notable[0].timestamp,
             )
+
+    @rp.register_filter()
+    def age(records: Sequence[Record]) -> Iterable[bool]:
+        """Filter records older than 5 minutes."""
+        latest = records[-1]
+        for record in records:
+            yield (latest.timestamp - record.timestamp).seconds < 60 * 5
 
     if len(sys.argv) != 2:
         print("Usage: python -m mission_control [input_data_file]")

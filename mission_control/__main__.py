@@ -69,6 +69,9 @@ def read_records(filename: str | Path) -> typing.Iterable[Record]:
 rp = RecordProcessor()
 
 
+# note: the performance of these two alerts is potentially quadratic. it might
+# be necessary to have a stateful check, i.e., a check that can keep track of
+# previous results, if performance becomes a concern.
 @rp.register_alert(component=Component.BATT)
 def low_voltage(records: Sequence[Record]) -> Alert | None:
     """Check if there are 3 or more records with a voltage reading below the red_low."""

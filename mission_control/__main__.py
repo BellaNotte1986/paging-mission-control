@@ -66,59 +66,63 @@ def read_records(filename: str | Path) -> typing.Iterable[Record]:
             )
 
 
+rp = RecordProcessor()
+
+
+@rp.register_alert(component=Component.BATT)
+def low_voltage(records: Sequence[Record]) -> Alert | None:
+    """Check if there are 3 or more records with a voltage reading below the red_low."""
+    if not records:
+        return None
+
+    notable = []
+    for record in records:
+        if (
+            record.val < record.red_low
+        ):
+            notable.append(record)
+
+    if len(notable) > 2:
+        return Alert(
+            satelliteId=notable[0].satellite_id,
+            severity="RED LOW",
+            component=notable[0].component,
+            timestamp=notable[0].timestamp,
+        )
+
+
+@rp.register_alert(component=Component.TSTAT)
+def high_temp(records: Sequence[Record]) -> Alert | None:
+    """Check if there are 3 or more records with a temperature reading above the red_high."""
+    if not records:
+        return None
+    notable = []
+    for record in records:
+        if record.val > record.red_high:
+            notable.append(record)
+
+    if len(notable) > 2:
+        return Alert(
+            satelliteId=notable[0].satellite_id,
+            severity="RED HIGH",
+            component=notable[0].component,
+            timestamp=notable[0].timestamp,
+        )
+
+
+@rp.register_filter()
+def age(records: Sequence[Record]) -> Iterable[bool]:
+    """Filter records older than 5 minutes."""
+    latest = records[-1]
+    for record in records:
+        yield (latest.timestamp - record.timestamp).seconds < 60 * 5
+
+
 if __name__ == '__main__':
-    rp = RecordProcessor()
-
-    @rp.register_alert(component=Component.BATT)
-    def low_voltage(records: Sequence[Record]) -> Alert | None:
-        """Check if there are 3 or more records with a voltage reading below the red_low."""
-        if not records:
-            return None
-
-        notable = []
-        for record in records:
-            if (
-                record.val < record.red_low
-            ):
-                notable.append(record)
-
-        if len(notable) > 2:
-            return Alert(
-                satelliteId=notable[0].satellite_id,
-                severity="RED LOW",
-                component=notable[0].component,
-                timestamp=notable[0].timestamp,
-            )
-
-    @rp.register_alert(component=Component.TSTAT)
-    def high_temp(records: Sequence[Record]) -> Alert | None:
-        """Check if there are 3 or more records with a temperature reading above the red_high."""
-        if not records:
-            return None
-        notable = []
-        for record in records:
-            if record.val > record.red_high:
-                notable.append(record)
-
-        if len(notable) > 2:
-            return Alert(
-                satelliteId=notable[0].satellite_id,
-                severity="RED HIGH",
-                component=notable[0].component,
-                timestamp=notable[0].timestamp,
-            )
-
-    @rp.register_filter()
-    def age(records: Sequence[Record]) -> Iterable[bool]:
-        """Filter records older than 5 minutes."""
-        latest = records[-1]
-        for record in records:
-            yield (latest.timestamp - record.timestamp).seconds < 60 * 5
-
     if len(sys.argv) != 2:
         print("Usage: python -m mission_control [input_data_file]")
         sys.exit(1)
 
-    input_file = sys.argv[1]  # first is the path of the program itself
+    input_file = sys.argv[1]  # zeroth arg is the path of the program itself
     alerts = rp.process(read_records(input_file))
     print(json.dumps(alerts, cls=AlertEncoder, indent=4))

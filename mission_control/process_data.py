@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime as dt
 import enum
 import typing
@@ -35,8 +37,8 @@ class Record:
     component: Component
 
 
-AlertCallback = typing.Callable[[Sequence[Record]], Alert | None]
-FilterCallback = typing.Callable[[Sequence[Record]], Iterable[bool]]
+AlertCallback = typing.Callable[["Sequence[Record]"], typing.Optional[Alert]]
+FilterCallback = typing.Callable[["Sequence[Record]"], "Iterable[bool]"]
 
 
 class RecordProcessor:

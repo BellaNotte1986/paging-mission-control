@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime as dt
 import json
 import sys
@@ -37,7 +39,7 @@ def parse_timestamp(s: str) -> dt.datetime:
     # not sure what time zone to use, but the sample output uses UTC, so that
     # will probably be fine
     ts = dt.datetime.strptime(s, "%Y%m%d %H:%M:%S.%f")
-    return ts.replace(tzinfo=dt.UTC)
+    return ts.replace(tzinfo=dt.timezone(dt.timedelta(hours=0)))
 
 
 def read_records(filename: str | Path) -> typing.Iterable[Record]:

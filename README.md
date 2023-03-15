@@ -1,6 +1,6 @@
 # Paging Mission Control
 
-![Linting and Testing](https://github.com/jonathan-d-zhang/paging-mission-control/actions/workflows/linting.yaml/badge.svg)
+![Lint and Test](https://github.com/jonathan-d-zhang/paging-mission-control/actions/workflows/lint-test.yaml/badge.svg)
 
 
 ## Usage

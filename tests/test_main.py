@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime as dt
 from pathlib import Path
 
@@ -22,21 +24,23 @@ TEST_INPUT = """\
 20180101 23:05:05.021|1001|101|98|25|20|89.9|TSTAT
 20180101 23:05:07.421|1001|17|15|9|8|7.9|BATT"""
 
+UTC = dt.timezone(dt.timedelta(hours=0))
+
 TIMESTAMPS = [
-    dt.datetime(2018, 1, 1, 23, 1, 5, 1000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 1, 9, 521000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 1, 26, 11000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 1, 38, 1000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 1, 49, 21000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 2, 9, 14000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 2, 10, 21000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 2, 11, 302000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 3, 3, 8000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 3, 5, 9000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 4, 6, 17000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 4, 11, 531000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 5, 5, 21000, dt.UTC),
-    dt.datetime(2018, 1, 1, 23, 5, 7, 421000, dt.UTC),
+    dt.datetime(2018, 1, 1, 23, 1, 5, 1000, UTC),
+    dt.datetime(2018, 1, 1, 23, 1, 9, 521000, UTC),
+    dt.datetime(2018, 1, 1, 23, 1, 26, 11000, UTC),
+    dt.datetime(2018, 1, 1, 23, 1, 38, 1000, UTC),
+    dt.datetime(2018, 1, 1, 23, 1, 49, 21000, UTC),
+    dt.datetime(2018, 1, 1, 23, 2, 9, 14000, UTC),
+    dt.datetime(2018, 1, 1, 23, 2, 10, 21000, UTC),
+    dt.datetime(2018, 1, 1, 23, 2, 11, 302000, UTC),
+    dt.datetime(2018, 1, 1, 23, 3, 3, 8000, UTC),
+    dt.datetime(2018, 1, 1, 23, 3, 5, 9000, UTC),
+    dt.datetime(2018, 1, 1, 23, 4, 6, 17000, UTC),
+    dt.datetime(2018, 1, 1, 23, 4, 11, 531000, UTC),
+    dt.datetime(2018, 1, 1, 23, 5, 5, 21000, UTC),
+    dt.datetime(2018, 1, 1, 23, 5, 7, 421000, UTC),
 ]
 
 
@@ -86,7 +90,7 @@ def test_read_records(tmp_path: Path, records: list[Record]) -> None:
 def test_age(records: list[Record]) -> None:
     """Test age filter."""
     records = (
-        [Record(dt.datetime(2018, 1, 1, 22, tzinfo=dt.UTC), 1000, 20, 20, 20, 20, 20, Component("BATT"))] + records
+        [Record(dt.datetime(2018, 1, 1, 22, tzinfo=UTC), 1000, 20, 20, 20, 20, 20, Component("BATT"))] + records
     )
     # all entries are within 5 minutes of each other, except the one we just added
     assert list(__main__.age(records)) == [False] + [True] * (len(records) - 1)

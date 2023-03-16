@@ -45,9 +45,9 @@ TIMESTAMPS = [
 
 
 @pytest.fixture
-def test_data() -> list[tuple[int, int, int, int, int, float, Component]]:
-    """Test fixture for sample input."""
-    return [
+def records() -> list[Record]:
+    """Test fixture for parsed sample input."""
+    data = [
         (1001, 101, 98, 25, 20, 99.9, Component.TSTAT),
         (1000, 17, 15, 9, 8, 7.8, Component.BATT),
         (1001, 101, 98, 25, 20, 99.8, Component.TSTAT),
@@ -64,11 +64,7 @@ def test_data() -> list[tuple[int, int, int, int, int, float, Component]]:
         (1001, 17, 15, 9, 8, 7.9, Component.BATT),
     ]
 
-
-@pytest.fixture
-def records(test_data: list[tuple[int, int, int, int, int, float, Component]]) -> list[Record]:
-    """Test fixture for parsed sample input."""
-    return [Record(ts, *x) for ts, x in zip(TIMESTAMPS, test_data)]
+    return [Record(ts, *x) for ts, x in zip(TIMESTAMPS, data)]
 
 
 @pytest.mark.parametrize(

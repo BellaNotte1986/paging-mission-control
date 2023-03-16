@@ -1,5 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+
+alertReport = {
+    'TSTAT': {},
+    'BATT': {},
+}
+result = list()
 
 
 def fetchTxtFile(filename: str) -> list[str]:
@@ -31,23 +37,29 @@ def createSeverity(red_high_limit: float, yellow_high_limit: float, yellow_low_l
     return "NORMAL"
 
 
-def createRecord(row: str) -> dict:
+def addRecord(row: str):
     timestamp, satellite_id, red_high_limit, yellow_high_limit, yellow_low_limit, red_low_limit, raw_value, component = row.split(
         '|')
-
+    timestamp = createTimestamp(timestamp)
     record = {
         'satelliteId': int(satellite_id),
         'severity': createSeverity(float(red_high_limit), float(yellow_high_limit), float(yellow_low_limit), float(red_low_limit), float(raw_value)),
         'component': component,
-        'timestamp': str(createTimestamp(timestamp).isoformat())[:-3] + 'Z',
+        'timestamp': str(timestamp.isoformat())[:-3] + 'Z',
     }
 
-    return record
+    if tstatRedHigh(record):
+        countThree('TSTAT', timestamp)
+        alertReport['TSTAT'][timestamp] = record
+
+    if battRedLow(record):
+        countThree('BATT', timestamp)
+        alertReport['BATT'][timestamp] = record
 
 
-def fileToData(data: list[str]) -> list[dict]:
-    result = [createRecord(status) for status in data]
-    return result
+def fileToReport(data: list[str]):
+    for status in data:
+        addRecord(status)
 
 
 def tstatRedHigh(data: dict) -> bool:
@@ -58,72 +70,22 @@ def battRedLow(data: dict) -> bool:
     return data['component'] == 'BATT' and data['severity'] == "RED LOW"
 
 
-def addToReport(report: dict, status: dict) -> dict:
-    report[status['satelliteId']] = {
-        'count': 0,
-        'case': status
-    }
-
-
-def alertReport(data: list[dict]) -> list[dict]:
-    """create a report dict based on minutes """
-    batt_red_low = dict()
-    tstat_red_high = dict()
-    result = list()
-
-    for status in data:
-        if tstatRedHigh(status):
-            if status['satelliteId'] not in tstat_red_high:
-                addToReport(tstat_red_high, status)
-            tstat_red_high[status['satelliteId']]['count'] += 1
-
-            if tstat_red_high[status['satelliteId']]['count'] >= 3:
-                result.append(tstat_red_high[status['satelliteId']]['case'])
-
-        if battRedLow(status):
-            if status['satelliteId'] not in batt_red_low:
-                addToReport(batt_red_low, status)
-            batt_red_low[status['satelliteId']]['count'] += 1
-
-            if batt_red_low[status['satelliteId']]['count'] >= 3:
-                result.append(batt_red_low[status['satelliteId']]['case'])
-    print(batt_red_low)
-    print(tstat_red_high)
-    return result
-
-
-def createAlertReport(data: list[dict]) -> dict[dict]:
-    alertReport = {
-        'BATT': {},
-        'TSTAT': {},
-    }
-    batt_red_low = dict()
-    tstat_red_high = dict()
-    result = list()
-
-    for status in data:
-        if tstatRedHigh(status):
-            addToReport(tstat_red_high, status)
-            tstat_red_high[status['satelliteId']]['count'] += 1
-
-            if tstat_red_high[status['satelliteId']]['count'] >= 3:
-                result.append(tstat_red_high[status['satelliteId']]['case'])
-
-        if battRedLow(status):
-            if status['satelliteId'] not in batt_red_low:
-                batt_red_low[status['satelliteId']] = {
-                    'count': 0,
-                    'case': status
-                }
-            batt_red_low[status['satelliteId']]['count'] += 1
-
-            if batt_red_low[status['satelliteId']]['count'] >= 3:
-                result.append(batt_red_low[status['satelliteId']]['case'])
-
-    return result
+def countThree(component, timestamp):
+    count = 0
+    on = True
+    first = ""
+    for time, record in alertReport[component].items():
+        if(abs((timestamp - time) // timedelta(minutes=1)) <= 5):
+          if(on):
+            first = record
+            on = False
+          count+= 1
+    if count >= 2:
+      if first not in result:
+        result.append(first)
 
 
 data = fetchTxtFile("input.txt")
-data = fileToData(data)
-result = json.dumps(alertReport(data), indent=4)
+data = fileToReport(data)
+result = json.dumps(result, indent=4)
 print(result)

@@ -22,23 +22,18 @@ def test_process(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F
     """Test if records are processed correctly, i.e., the correct Alerts are returned."""
     @rp.register_alert(Component.BATT)
     def always_alert(records: Sequence[Record]) -> Alert | None:
-        # first record with component BATT
-        record = next(x for x in records if x.component == Component.BATT)
-        return Alert(
-            satelliteId=record.satellite_id,
-            severity="RED LOW",
-            component=Component.BATT,
-            timestamp=record.timestamp,
-        )
+        # if last element is a BATT, alert
+        record = records[-1]
+        if record.component != Component.BATT:
+            return None
 
-    out = rp.process(records[1:2])
+        return record.to_alert("RED LOW")
+
+    out = rp.process(records)
     assert out == [
-        Alert(
-            satelliteId=1000,
-            severity="RED LOW",
-            component=Component.BATT,
-            timestamp=dt.datetime(2018, 1, 1, 23, 1, 9, 521000, UTC),
-        )
+        record.to_alert("RED LOW")
+        for record in records
+        if record.component == Component.BATT
     ]
 
 
@@ -58,5 +53,19 @@ def test_run_checks_keep_all(rp: RecordProcessor, records: list[Record]) -> None
 
     id1000 = [x for x in records if x.satellite_id == 1000]
     id1001 = [x for x in records if x.satellite_id == 1001]
+    assert id1000 == rp.data[1000]
+    assert id1001 == rp.data[1001]
+
+
+def test_run_checks_remove_batt(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F811
+    """Test checks filter properly."""
+    @rp.register_filter()
+    def batt(records: Sequence[Record]) -> list[bool]:
+        return [record.component == Component.TSTAT for record in records]
+
+    rp.process(records)
+
+    id1000 = [x for x in records if x.satellite_id == 1000 and x.component == Component.TSTAT]
+    id1001 = [x for x in records if x.satellite_id == 1001 and x.component == Component.TSTAT]
     assert id1000 == rp.data[1000]
     assert id1001 == rp.data[1001]

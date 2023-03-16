@@ -57,7 +57,7 @@ def addRecord(row: str) -> None:
         '|')
 
     timestamp = createTimestamp(timestamp)
-    
+
     record = createRecord(timestamp, satellite_id, red_high_limit, yellow_high_limit,
                           yellow_low_limit, red_low_limit, raw_value, component)
 
@@ -112,5 +112,7 @@ def countTwo(component, timestamp):
 
 data = fetchTxtFile(filename)
 data = fileToReport(data)
+
+# convert report into json format
 result = json.dumps(result, indent=4)
 print(result)

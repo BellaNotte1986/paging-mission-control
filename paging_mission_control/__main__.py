@@ -86,12 +86,7 @@ def low_voltage(records: Sequence[Record]) -> Alert | None:
             notable += 1
 
         if notable > 2:
-            return Alert(
-                satelliteId=record.satellite_id,
-                severity="RED LOW",
-                component=record.component,
-                timestamp=record.timestamp,
-            )
+            return record.to_alert("RED LOW")
 
 
 @rp.register_alert(component=Component.TSTAT)
@@ -106,12 +101,7 @@ def high_temp(records: Sequence[Record]) -> Alert | None:
             notable += 1
 
         if notable > 2:
-            return Alert(
-                satelliteId=record.satellite_id,
-                severity="RED HIGH",
-                component=record.component,
-                timestamp=record.timestamp,
-            )
+            return record.to_alert("RED HIGH")
 
 
 @rp.register_filter()

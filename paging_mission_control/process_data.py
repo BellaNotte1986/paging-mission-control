@@ -36,6 +36,15 @@ class Record:
     val: float
     component: Component
 
+    def to_alert(self, severity: str) -> Alert:
+        """Helper function to create an Alert."""
+        return Alert(
+            satelliteId=self.satellite_id,
+            severity=severity,
+            component=self.component,
+            timestamp=self.timestamp,
+        )
+
 
 AlertCallback = typing.Callable[["Sequence[Record]"], typing.Optional[Alert]]
 FilterCallback = typing.Callable[["Sequence[Record]"], "Iterable[bool]"]

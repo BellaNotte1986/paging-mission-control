@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
 import json
 
-alertReport = {
+alert_report = {
     'TSTAT': {},
     'BATT': {},
 }
 result = list()
+filename = "input.txt"
+TSTAT = 'TSTAT'
+BATT = 'BATT'
 
 
 def fetchTxtFile(filename: str) -> list[str]:
@@ -26,6 +29,7 @@ def createTimestamp(timestamp: str) -> datetime:
 
 
 def createSeverity(red_high_limit: float, yellow_high_limit: float, yellow_low_limit: float, red_low_limit: float, raw_value: float) -> str:
+    '''return alert label based on raw_value'''
     if raw_value > red_high_limit:
         return "RED HIGH"
     elif raw_value > yellow_high_limit:
@@ -37,10 +41,7 @@ def createSeverity(red_high_limit: float, yellow_high_limit: float, yellow_low_l
     return "NORMAL"
 
 
-def addRecord(row: str):
-    timestamp, satellite_id, red_high_limit, yellow_high_limit, yellow_low_limit, red_low_limit, raw_value, component = row.split(
-        '|')
-    timestamp = createTimestamp(timestamp)
+def createRecord(timestamp: datetime, satellite_id: str, red_high_limit: str, yellow_high_limit: str, yellow_low_limit: str, red_low_limit: str, raw_value: str, component: str) -> dict:
     record = {
         'satelliteId': int(satellite_id),
         'severity': createSeverity(float(red_high_limit), float(yellow_high_limit), float(yellow_low_limit), float(red_low_limit), float(raw_value)),
@@ -48,13 +49,25 @@ def addRecord(row: str):
         'timestamp': str(timestamp.isoformat())[:-3] + 'Z',
     }
 
+    return record
+
+
+def addRecord(row: str) -> None:
+    timestamp, satellite_id, red_high_limit, yellow_high_limit, yellow_low_limit, red_low_limit, raw_value, component = row.split(
+        '|')
+
+    timestamp = createTimestamp(timestamp)
+    
+    record = createRecord(timestamp, satellite_id, red_high_limit, yellow_high_limit,
+                          yellow_low_limit, red_low_limit, raw_value, component)
+
     if tstatRedHigh(record):
-        countTwo('TSTAT', timestamp)
-        alertReport['TSTAT'][timestamp] = record
+        countTwo(TSTAT, timestamp)
+        alert_report[TSTAT][timestamp] = record
 
     if battRedLow(record):
-        countTwo('BATT', timestamp)
-        alertReport['BATT'][timestamp] = record
+        countTwo(BATT, timestamp)
+        alert_report[BATT][timestamp] = record
 
 
 def fileToReport(data: list[str]):
@@ -70,25 +83,34 @@ def battRedLow(data: dict) -> bool:
     return data['component'] == 'BATT' and data['severity'] == "RED LOW"
 
 
+def withinTimespan(start: datetime, stop: datetime, minutes: int) -> bool:
+    '''reutnr if time difference within the given timespan '''
+    return (stop - start) // timedelta(minutes=1) <= minutes
+
+
 def countTwo(component, timestamp):
+    '''insert record to result when there are two previous alert'''
     count = 0
     on = True
     first = ""
-    for time, record in alertReport[component].items():
-        # if the time different is under 5 minutes
-        if((timestamp - time) // timedelta(minutes=1) <= 5):
-          # one time only, add the first found record to first
-          if(on):
-            first = record
-            on = False
-          count+= 1
-          
-    if count >= 2:
-      if first not in result:
-        result.append(first)
+    time_span = 5
+    alert_limit = 2
+    component_alert_report = alert_report[component]
+
+    for time, record in component_alert_report.items():
+        if(withinTimespan(timestamp, time, time_span)):
+            # one time only, add the first found record to first
+            if(on):
+                first = record
+                on = False
+            count += 1
+
+    if count >= alert_limit:
+        if first not in result:
+            result.append(first)
 
 
-data = fetchTxtFile("input.txt")
+data = fetchTxtFile(filename)
 data = fileToReport(data)
 result = json.dumps(result, indent=4)
 print(result)

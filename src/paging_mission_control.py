@@ -84,7 +84,7 @@ def battRedLow(data: dict) -> bool:
 
 
 def withinTimespan(start: datetime, stop: datetime, minutes: int) -> bool:
-    '''reutnr if time difference within the given timespan '''
+    '''return if time difference within the given timespan '''
     return (stop - start) // timedelta(minutes=1) <= minutes
 
 

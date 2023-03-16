@@ -56,9 +56,8 @@ class RecordProcessor:
     def __init__(self):
         self.data: dict[int, list[Record]] = {}
         self.filters: list[FilterCallback] = []
-        self.alerts: dict[
-            Component, list[AlertCallback]
-        ] = {}
+        self.alerts: dict[Component, list[AlertCallback]] = {}
+
         # can't use dict.fromkeys because we would end up with many references
         # to the same list
         for variant in Component:
@@ -82,7 +81,14 @@ class RecordProcessor:
         return alerts
 
     def register_alert(self, component: Component) -> typing.Callable[[AlertCallback], AlertCallback]:
-        """Register a function to check whether or not an Alert should be emitted."""
+        """
+        Register a function to check whether or not an Alert should be emitted.
+
+        Functions registered with this decorator will be called for each record
+        processed and should return an Alert if necessary, else None.
+
+        The most recently added record will be the last element.
+        """
         def outer(f: AlertCallback) -> AlertCallback:
             self.alerts[component].append(f)
 
@@ -97,6 +103,11 @@ class RecordProcessor:
         """
         Register a function to check if a record should be kept.
 
+        Functions registered with this decorator will be called for each record
+        processed and should return a Sequence[bool] with the same length as
+        the input, where each element represents if the element at that index
+        should be kept.
+
         The most recently added record will be the last element.
         """
         def outer(f: FilterCallback) -> FilterCallback:
@@ -109,25 +120,54 @@ class RecordProcessor:
 
         return outer
 
-    def _run_checks(self, satellite: list[Record]) -> Iterable[Alert]:
-        """Run the registered callbacks."""
-        # remove records that we don't need to store anymore
+    def _filter_records(self, satellite: list[Record]) -> list[Record]:
+        """
+        Filter records that aren't needed based on filter callbacks.
+
+        Args:
+            satellite (list[Record]): a list of records for a specific satellite to filter
+
+        Returns:
+            list[Record]: the filtered list of records
+        """
         # in order for a record to be removed, all filters must return False
         # could also parallelize in the future
         if self.filters:
             new_records = []
+            # transpose the results of the filters so we can loop over the
+            # columns, i.e., we consider all filter results for the first
+            # element, then the second, and so on.
             for record, filter_results in zip(satellite, zip(*(f(satellite) for f in self.filters))):
                 if any(filter_results):
                     new_records.append(record)
 
-            self.data[satellite[-1].satellite_id] = new_records
+            return new_records
+        else:
+            # if there are no registered filters, return input unchanged
+            return satellite
 
-        alerts = []
+    def _run_checks(self, satellite: list[Record]) -> Iterable[Alert]:
+        """
+        Run the registered callbacks.
+
+        This function first removes records we don't need anymore by checking
+        the conditions with the callbacks registered with `register_filter`.
+
+        Next, the callbacks registered with `register_alert` are called to
+        gather the alerts that should be emitted.
+
+        Args:
+            satellite (list[Record]): the records to check
+
+        Returns:
+            Iterable[Alert]: an iterable of 0 or more alerts.
+        """
+        # remove records that we don't need to store anymore
+        self.data[satellite[-1].satellite_id] = self._filter_records(satellite)
+
         # only need to run checks on the satellite_id that was just added,
         # though this could change in the future depending on what we want to
         # check
         for check in self.alerts[satellite[-1].component]:
             if t := check(self.data[satellite[-1].satellite_id]):
-                alerts.append(t)
-
-        return alerts
+                yield t

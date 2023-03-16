@@ -29,6 +29,7 @@ def test_process(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F
 
         return record.to_alert("RED LOW")
 
+    # should produce an alert for every record with component == BATT
     out = rp.process(records)
     assert out == [
         record.to_alert("RED LOW")
@@ -37,7 +38,7 @@ def test_process(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F
     ]
 
 
-def test_run_checks_keep_all(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F811
+def test_filter_records_keep_all(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F811
     """Test checks are being run correctly."""
     # register 2 checks: one that always returns True, and one that always
     # returns False. We should see the input is equal to the output
@@ -49,23 +50,29 @@ def test_run_checks_keep_all(rp: RecordProcessor, records: list[Record]) -> None
     def always_false(records: Sequence[Record]) -> list[bool]:
         return len(records) * [False]
 
-    rp.process(records)
+    id1000_in = [x for x in records if x.satellite_id == 1000]
+    id1001_in = [x for x in records if x.satellite_id == 1001]
+    id1000_out = rp._filter_records(id1000_in)
+    id1001_out = rp._filter_records(id1001_in)
 
-    id1000 = [x for x in records if x.satellite_id == 1000]
-    id1001 = [x for x in records if x.satellite_id == 1001]
-    assert id1000 == rp.data[1000]
-    assert id1001 == rp.data[1001]
+    id1000_exp = [x for x in records if x.satellite_id == 1000]
+    id1001_exp = [x for x in records if x.satellite_id == 1001]
+    assert id1000_exp == id1000_out
+    assert id1001_exp == id1001_out
 
 
-def test_run_checks_remove_batt(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F811
+def test_filter_records_remove_batt(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F811
     """Test checks filter properly."""
     @rp.register_filter()
     def batt(records: Sequence[Record]) -> list[bool]:
         return [record.component == Component.TSTAT for record in records]
 
-    rp.process(records)
+    id1000_in = [x for x in records if x.satellite_id == 1000]
+    id1001_in = [x for x in records if x.satellite_id == 1001]
+    id1000_out = rp._filter_records(id1000_in)
+    id1001_out = rp._filter_records(id1001_in)
 
-    id1000 = [x for x in records if x.satellite_id == 1000 and x.component == Component.TSTAT]
-    id1001 = [x for x in records if x.satellite_id == 1001 and x.component == Component.TSTAT]
-    assert id1000 == rp.data[1000]
-    assert id1001 == rp.data[1001]
+    id1000_exp = [x for x in records if x.satellite_id == 1000 and x.component == Component.TSTAT]
+    id1001_exp = [x for x in records if x.satellite_id == 1001 and x.component == Component.TSTAT]
+    assert id1000_exp == id1000_out
+    assert id1001_exp == id1001_out

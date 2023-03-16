@@ -49,11 +49,11 @@ def addRecord(row: str):
     }
 
     if tstatRedHigh(record):
-        countThree('TSTAT', timestamp)
+        countTwo('TSTAT', timestamp)
         alertReport['TSTAT'][timestamp] = record
 
     if battRedLow(record):
-        countThree('BATT', timestamp)
+        countTwo('BATT', timestamp)
         alertReport['BATT'][timestamp] = record
 
 
@@ -70,16 +70,19 @@ def battRedLow(data: dict) -> bool:
     return data['component'] == 'BATT' and data['severity'] == "RED LOW"
 
 
-def countThree(component, timestamp):
+def countTwo(component, timestamp):
     count = 0
     on = True
     first = ""
     for time, record in alertReport[component].items():
-        if(abs((timestamp - time) // timedelta(minutes=1)) <= 5):
+        # if the time different is under 5 minutes
+        if((timestamp - time) // timedelta(minutes=1) <= 5):
+          # one time only, add the first found record to first
           if(on):
             first = record
             on = False
           count+= 1
+          
     if count >= 2:
       if first not in result:
         result.append(first)

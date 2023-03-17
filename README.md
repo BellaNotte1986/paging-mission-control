@@ -3,7 +3,7 @@
 ![Lint and Test](https://github.com/jonathan-d-zhang/paging-mission-control/actions/workflows/lint-test.yaml/badge.svg)
 
 ## Installation
-You can install paging-mission-control using pip
+This project requires Python 3.8+. You can install paging-mission-control using pip
 ```bash
 python -m pip git+https://github.com/jonathan-d-zhang/paging-mission-control.git
 ```

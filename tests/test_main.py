@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from paging_mission_control import __main__
-from paging_mission_control.process_data import Alert, Component, Record
+from paging_mission_control.process_data import Component, Record
 
 TEST_INPUT = """\
 20180101 23:01:05.001|1001|101|98|25|20|99.9|TSTAT
@@ -96,7 +96,7 @@ def test_high_temp(records: list[Record]) -> None:
     """Test high temp alert."""
     assert (
         __main__.high_temp([x for x in records if x.satellite_id == 1000])
-        == Alert(satelliteId=1000, severity="RED HIGH", component=Component.TSTAT, timestamp=TIMESTAMPS[3])
+        == records[3].to_alert("RED HIGH")
     )
 
 
@@ -104,5 +104,16 @@ def test_low_voltage(records: list[Record]) -> None:
     """Test low voltage alert."""
     assert (
         __main__.low_voltage([x for x in records if x.satellite_id == 1000])
-        == Alert(satelliteId=1000, severity="RED LOW", component=Component.BATT, timestamp=TIMESTAMPS[1])
+        == records[1].to_alert("RED LOW")
+    )
+
+
+def test_high_temp_emit_multiple(records: list[Record]) -> None:
+    """High temp alert should emit multiple, different alerts when 4 records greater than limit are entered."""
+    # insert a new record, identical to the third record, so that another alert is emitted
+    r = Record(dt.datetime(2018, 1, 1, 23, 1, 39, 1000, UTC), 1000, 101, 98, 25, 20, 102.9, Component.TSTAT)
+    records.insert(4, r)
+    assert (
+        __main__.high_temp([x for x in records if x.satellite_id == 1000])
+        == records[4].to_alert("RED HIGH")
     )

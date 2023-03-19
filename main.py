@@ -56,7 +56,8 @@ def parse_file(file_name):
                         "component": "BATT",
                         "timestamp": batt_tracker[component][0].strftime("%Y%m%d %H:%M:%S.%f")
                     })
-                    batt_tracker[component] = (curr_time, 1)
+                    batt_tracker[component] = (
+                        datetime(1, 1, 1, 0, 0, 0, 0), 1)
 
         else:
             if raw_value > red_high:
@@ -77,6 +78,8 @@ def parse_file(file_name):
                         "component": "TSTAT",
                         "timestamp": tstat_tracker[component][0].strftime("%Y%m%d %H:%M:%S.%f")
                     })
+                    tstat_tracker[component] = (
+                        datetime(1, 1, 1, 0, 0, 0, 0), 1)
 
     return answer
 

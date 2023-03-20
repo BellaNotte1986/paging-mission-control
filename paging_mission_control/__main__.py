@@ -46,16 +46,7 @@ def read_records(filename: str | Path) -> typing.Iterable[Record]:
     """Read the records from the filename passed as command line argument."""
     with open(filename) as f:
         for line in map(str.strip, f):
-            (
-                ts,
-                sid,
-                red_high,
-                yellow_high,
-                yellow_low,
-                red_low,
-                val,
-                component,
-            ) = line.split("|")
+            ts, sid, red_high, yellow_high, yellow_low, red_low, val, component = line.split("|")
             yield Record(
                 timestamp=parse_timestamp(ts),
                 satellite_id=int(sid),

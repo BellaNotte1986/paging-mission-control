@@ -29,13 +29,21 @@ def test_process(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F
 
         return record.to_alert("RED LOW")
 
-    # should produce an alert for every record with component == BATT
     out = rp.process(records)
-    assert out == [
-        record.to_alert("RED LOW")
-        for record in records
-        if record.component == Component.BATT
+    # expect the first battery entry for each satellite
+    expected_out = [
+        next(
+            record.to_alert("RED LOW")
+            for record in records
+            if record.component == Component.BATT and record.satellite_id == 1000
+        ),
+        next(
+            record.to_alert("RED LOW")
+            for record in records
+            if record.component == Component.BATT and record.satellite_id == 1001
+        ),
     ]
+    assert list(out) == expected_out
 
 
 def test_filter_records_keep_all(rp: RecordProcessor, records: list[Record]) -> None:  # noqa: F811

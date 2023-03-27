@@ -108,12 +108,25 @@ def test_low_voltage(records: list[Record]) -> None:
     )
 
 
-def test_high_temp_emit_multiple(records: list[Record]) -> None:
-    """High temp alert should emit multiple, different alerts when 4 records greater than limit are entered."""
-    # insert a new record, identical to the third record, so that another alert is emitted
-    r = Record(dt.datetime(2018, 1, 1, 23, 1, 39, 1000, UTC), 1000, 101, 98, 25, 20, 102.9, Component.TSTAT)
+def test_high_temp_emit_single(records: list[Record]) -> None:
+    """High temp alert should emit only one alert when more than 3 anomalous records are entered."""
+    # insert a new record, identical to the third record, but one second later
+    r = Record(TIMESTAMPS[3].replace(second=TIMESTAMPS[3].second + 1), 1000, 101, 98, 25, 20, 102.9, Component.TSTAT)
     records.insert(4, r)
+
     assert (
         __main__.high_temp([x for x in records if x.satellite_id == 1000])
-        == records[4].to_alert("RED HIGH")
+        == records[3].to_alert("RED HIGH")
+    )
+
+
+def test_low_voltage_emit_single(records: list[Record]) -> None:
+    """Low voltage alert should emit only one alert when more than 3 anomalous records are entered."""
+    # insert a new record, identical to the second record, but one second later
+    r = Record(TIMESTAMPS[1].replace(second=TIMESTAMPS[2].second + 1), 1000, 17, 15, 9, 8, 7.8, Component.BATT)
+    records.insert(2, r)
+
+    assert (
+        __main__.low_voltage([x for x in records if x.satellite_id == 1000])
+        == records[1].to_alert("RED LOW")
     )

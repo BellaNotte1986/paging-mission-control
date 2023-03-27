@@ -72,12 +72,16 @@ def low_voltage(records: Sequence[Record]) -> Alert | None:
         return None
 
     notable = 0
-    for record in reversed(records):
+    first = None
+    for record in records:
         if record.val < record.red_low:
             notable += 1
+            if not first:
+                first = record
 
         if notable > 2:
-            return record.to_alert("RED LOW")
+            first = typing.cast(Record, first)
+            return first.to_alert("RED LOW")
 
 
 @rp.register_alert(component=Component.TSTAT)
@@ -87,12 +91,16 @@ def high_temp(records: Sequence[Record]) -> Alert | None:
         return None
 
     notable = 0
-    for record in reversed(records):
+    first = None
+    for record in records:
         if record.val > record.red_high:
             notable += 1
+            if not first:
+                first = record
 
         if notable > 2:
-            return record.to_alert("RED HIGH")
+            first = typing.cast(Record, first)
+            return first.to_alert("RED HIGH")
 
 
 @rp.register_filter()
@@ -109,5 +117,5 @@ if __name__ == '__main__':
         sys.exit(1)
 
     input_file = sys.argv[1]  # zeroth arg is the path of the program itself
-    alerts = rp.process(read_records(input_file))
+    alerts = list(rp.process(read_records(input_file)))
     print(json.dumps(alerts, cls=AlertEncoder, indent=4))

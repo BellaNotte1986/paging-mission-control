@@ -57,13 +57,14 @@ class RecordProcessor:
         self.data: dict[int, list[Record]] = {}
         self.filters: list[FilterCallback] = []
         self.alerts: dict[Component, list[AlertCallback]] = {}
+        self.emitted: set[tuple[int, Component]] = set()
 
         # can't use dict.fromkeys because we would end up with many references
         # to the same list
         for variant in Component:
             self.alerts[variant] = []
 
-    def process(self, records: Iterable[Record]) -> Sequence[Alert]:
+    def process(self, records: Iterable[Record]) -> Iterable[Alert]:
         """
         Ingests an iterable of records, returning any Alerts.
 
@@ -73,12 +74,9 @@ class RecordProcessor:
         Returns:
             Sequence[Alert]: the emitted alerts, potentially empty
         """
-        alerts = []
         for record in records:
             self.data.setdefault(record.satellite_id, []).append(record)
-            alerts.extend(self._run_checks(self.data[record.satellite_id]))
-
-        return alerts
+            yield from self._run_checks(self.data[record.satellite_id])
 
     def register_alert(self, component: Component) -> typing.Callable[[AlertCallback], AlertCallback]:
         """
@@ -168,6 +166,13 @@ class RecordProcessor:
         # only need to run checks on the satellite_id that was just added,
         # though this could change in the future depending on what we want to
         # check
-        for check in self.alerts[satellite[-1].component]:
-            if t := check(self.data[satellite[-1].satellite_id]):
+        #
+        # additionally, we only need to emit one alert per component per
+        # satellite, so we cache the metadata of the components we've
+        # previously alerted about
+        latest = self.data[satellite[-1].satellite_id][-1]
+        for check in self.alerts[latest.component]:
+            entry = latest.satellite_id, latest.component
+            if entry not in self.emitted and (t := check(self.data[latest.satellite_id])):
+                self.emitted.add(entry)
                 yield t
